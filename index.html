@@ -3109,6 +3109,7 @@ function renderPerformance(){
 function renderTicketList(){
   var list=getTickets();
   var statusFilter=document.getElementById('tk-filter-status').value;
+  var q=(document.getElementById('tk-search').value||'').trim().toLowerCase();
   var filtered=list.filter(function(t){
     if(statusFilter && t.status!==statusFilter) return false;
     if(!q) return true;
