@@ -2592,6 +2592,52 @@ var TK_SUPER_USER='superadmin', TK_SUPER_PASS='root786';
 var ticketAuthed=false;
 var ticketRole='admin'; // 'admin' or 'superadmin'
 
+/* ─── Cloud sync (Google Apps Script Web App) ───
+   Paste the /exec URL of the deployed "TicketsData" Apps Script here.
+   Until this is set, tickets fall back to this-browser-only storage. */
+var TICKETS_API_URL='https://script.google.com/macros/s/AKfycbz5HS6J4Dg5bqAa5xTDWePh-OFqWNeYkE76CQX7tQYKcY2ZBLJRsKnxEkmClT9HIDj_fw/exec';
+var _tkPullTimer=null;
+var _tkPushTimer=null;
+var _tkLastRemote=null;
+
+function tkCloudReady(){ return TICKETS_API_URL && TICKETS_API_URL.indexOf('PASTE_YOUR')!==0; }
+
+function tkQueuePush(){
+  if(!tkCloudReady()) return;
+  clearTimeout(_tkPushTimer);
+  _tkPushTimer=setTimeout(tkPushNow,600); // debounce rapid successive saves
+}
+function tkPushNow(){
+  if(!tkCloudReady()) return;
+  var payload={tickets:getTickets(),people:getTicketPeople(),deletedLog:getDeletedLog()};
+  fetch(TICKETS_API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight on Apps Script
+    body:JSON.stringify(payload)
+  }).catch(function(err){ console.warn('Ticket cloud sync (push) failed:',err); });
+}
+function tkPullFromCloud(){
+  if(!tkCloudReady()) return Promise.resolve();
+  return fetch(TICKETS_API_URL,{cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var stamp=JSON.stringify(data);
+      if(stamp===_tkLastRemote) return; // nothing new
+      _tkLastRemote=stamp;
+      if(Array.isArray(data.tickets)) localStorage.setItem('tk_tickets',JSON.stringify(data.tickets));
+      if(Array.isArray(data.people) && data.people.length) localStorage.setItem('tk_people',JSON.stringify(data.people));
+      if(Array.isArray(data.deletedLog)) localStorage.setItem('tk_deleted_log',JSON.stringify(data.deletedLog));
+      if(ticketAuthed && activeTabKey==='tickets') renderTicketApp();
+    })
+    .catch(function(err){ console.warn('Ticket cloud sync (pull) failed:',err); });
+}
+function tkStartPolling(){
+  if(!tkCloudReady()) return;
+  clearInterval(_tkPullTimer);
+  _tkPullTimer=setInterval(tkPullFromCloud,15000); // pick up tickets from other browsers
+}
+function tkStopPolling(){ clearInterval(_tkPullTimer); }
+
 function ticketLogin(){
   var u=(document.getElementById('tk-login-user').value||'').trim();
   var p=document.getElementById('tk-login-pass').value||'';
@@ -2604,6 +2650,8 @@ function ticketLogin(){
     document.getElementById('ticket-login').style.display='none';
     document.getElementById('ticket-app').style.display='block';
     renderTicketApp();
+    tkPullFromCloud().then(renderTicketApp);
+    tkStartPolling();
     toast('✓ Signed in as Super Admin','var(--green)');
   } else if(u===TK_USER && p===TK_PASS){
     ticketAuthed=true; ticketRole='admin';
@@ -2613,6 +2661,8 @@ function ticketLogin(){
     document.getElementById('ticket-login').style.display='none';
     document.getElementById('ticket-app').style.display='block';
     renderTicketApp();
+    tkPullFromCloud().then(renderTicketApp);
+    tkStartPolling();
     toast('✓ Signed in to Ticket System','var(--green)');
   } else {
     err.textContent='Invalid username or password.';
@@ -2620,6 +2670,7 @@ function ticketLogin(){
 }
 
 function ticketLogout(){
+  tkStopPolling();
   ticketAuthed=false; ticketRole='admin';
   sessionStorage.removeItem('tk_authed');
   sessionStorage.removeItem('tk_role');
@@ -2636,6 +2687,8 @@ function initTicketSystem(){
     document.getElementById('ticket-login').style.display='none';
     document.getElementById('ticket-app').style.display='block';
     renderTicketApp();
+    tkPullFromCloud().then(renderTicketApp);
+    tkStartPolling();
   } else {
     document.getElementById('ticket-login').style.display='block';
     document.getElementById('ticket-app').style.display='none';
@@ -2647,7 +2700,7 @@ function isSuperAdmin(){ return ticketRole==='superadmin'; }
 function getTickets(){
   try{ return JSON.parse(localStorage.getItem('tk_tickets')||'[]'); }catch(e){ return []; }
 }
-function saveTickets(list){ localStorage.setItem('tk_tickets',JSON.stringify(list)); }
+function saveTickets(list){ localStorage.setItem('tk_tickets',JSON.stringify(list)); tkQueuePush(); }
 
 function getTicketPeople(){
   try{
@@ -2656,7 +2709,7 @@ function getTicketPeople(){
   }catch(e){}
   return ['Patrick','Waqar','Noman','Yaseen','Allah Rakha','Sohail','Imran','Ayaz','Saad','Fakeha','Liaquat','Kamran'];
 }
-function saveTicketPeople(list){ localStorage.setItem('tk_people',JSON.stringify(list)); }
+function saveTicketPeople(list){ localStorage.setItem('tk_people',JSON.stringify(list)); tkQueuePush(); }
 
 function renderPeopleChecks(){
   var box=document.getElementById('tk-people-checks');
@@ -2785,7 +2838,7 @@ function deleteTicket(id){
 function getDeletedLog(){
   try{ return JSON.parse(localStorage.getItem('tk_deleted_log')||'[]'); }catch(e){ return []; }
 }
-function saveDeletedLog(list){ localStorage.setItem('tk_deleted_log',JSON.stringify(list)); }
+function saveDeletedLog(list){ localStorage.setItem('tk_deleted_log',JSON.stringify(list)); tkQueuePush(); }
 
 function restoreTicket(id){
   if(!isSuperAdmin()){ toast('⛔ Only Super Admin can restore tickets','var(--red)'); return; }
