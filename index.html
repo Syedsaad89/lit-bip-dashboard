@@ -495,7 +495,7 @@ table.dtbl tr:last-child td{border-bottom:none}
     <!-- Overall KPIs -->
     <div class="kpi-grid" style="margin-bottom:20px">
       <div class="kpi blue"><div class="kpi-label">FCU Overall Progress</div><div class="kpi-val" id="kpiFcuOverallVal">88.9%</div><div class="kpi-foot">64 total FCU units</div><div class="kpi-bar"><div class="kpi-bar-fill" id="kpiFcuOverallBar" style="width:88.9%;background:var(--accent)"></div></div></div>
-      <div class="kpi amber"><div class="kpi-label">AHU Overall Progress</div><div class="kpi-val">20%</div><div class="kpi-foot">5 AHUs · cable routing only</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:20%;background:var(--amber)"></div></div></div>
+      <div class="kpi amber"><div class="kpi-label">AHU Overall Progress</div><div class="kpi-val" id="ahuOverallVal">20%</div><div class="kpi-foot">5 AHUs · cable routing only</div><div class="kpi-bar"><div class="kpi-bar-fill" id="ahuOverallBar" style="width:20%;background:var(--amber)"></div></div></div>
       <div class="kpi green"><div class="kpi-label">FCU Floors</div><div class="kpi-val">4</div><div class="kpi-foot">GF · B1 · B4 · 1F</div></div>
       <div class="kpi purple"><div class="kpi-label">AHU Units</div><div class="kpi-val">5</div><div class="kpi-foot">Kitchen · Technic · Cinema · Office · AHU-2</div></div>
       <div class="kpi green"><div class="kpi-label">FCU Units Complete</div><div class="kpi-val">25</div><div class="kpi-foot">Ground Floor — 100%</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:39%;background:var(--green)"></div></div></div>
@@ -571,7 +571,7 @@ table.dtbl tr:last-child td{border-bottom:none}
 
     <!-- AHU Section -->
     <div class="card" style="margin-bottom:24px">
-      <div class="section-hd"><div><div class="section-title">AHU Summary — By Unit</div><div class="section-sub">Sensors Cable Routing · Installation · Termination · BMS Integration</div></div><div style="font-size:20px;font-weight:700;color:var(--amber)">20%</div></div>
+      <div class="section-hd"><div><div class="section-title">AHU Summary — By Unit</div><div class="section-sub">Sensors Cable Routing · Installation · Termination · BMS Integration</div></div><div id="ahuCardPct" style="font-size:20px;font-weight:700;color:var(--amber)">20%</div></div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
         <thead><tr>
           <th style="text-align:left;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border);color:var(--muted);font-size:10px;text-transform:uppercase">AHU Unit</th>
@@ -596,9 +596,9 @@ table.dtbl tr:last-child td{border-bottom:none}
     <div class="card" style="margin-bottom:24px">
       <div class="section-hd">
         <div><div class="section-title">Progress According to Payment Terms</div><div class="section-sub">Floor-by-floor progress breakdown</div></div>
-        <div style="font-size:24px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">56.84%</div>
+        <div id="paytermsHeaderPct" style="font-size:24px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">56.84%</div>
       </div>
-      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:18px">
+      <div class="kpi-grid" id="paytermsKpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:18px">
         <div class="kpi green"><div class="kpi-label">Ground Floor RB</div><div class="kpi-val">100%</div><div class="kpi-foot">Fully complete</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:100%;background:var(--green)"></div></div></div>
         <div class="kpi blue"><div class="kpi-label">B1 — RB</div><div class="kpi-val">57.88%</div><div class="kpi-foot">In progress</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:57.88%;background:var(--accent)"></div></div></div>
         <div class="kpi blue"><div class="kpi-label">RF — RB</div><div class="kpi-val">80%</div><div class="kpi-foot">In progress</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:80%;background:var(--accent)"></div></div></div>
@@ -607,7 +607,7 @@ table.dtbl tr:last-child td{border-bottom:none}
         <div class="kpi amber"><div class="kpi-label">RF — OB</div><div class="kpi-val">0%</div><div class="kpi-foot">Not started</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:2%;background:var(--amber)"></div></div></div>
         <div class="kpi amber"><div class="kpi-label">B1 — OB</div><div class="kpi-val">0%</div><div class="kpi-foot">Not started</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:2%;background:var(--amber)"></div></div></div>
       </div>
-      <div class="hbar-list" style="max-height:none">
+      <div class="hbar-list" id="paytermsHbarList" style="max-height:none">
         <div class="hbar-row"><div class="hbar-label">Ground Floor — RB</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:var(--green)30;border-right:2px solid var(--green)"><span class="hbar-fill-txt" style="color:var(--green)">100%</span></div></div><div class="hbar-count" style="width:52px">100.00%</div></div>
         <div class="hbar-row"><div class="hbar-label">B1 — RB</div><div class="hbar-track"><div class="hbar-fill" style="width:57.88%;background:var(--accent)30;border-right:2px solid var(--accent)"><span class="hbar-fill-txt" style="color:var(--accent)">58%</span></div></div><div class="hbar-count" style="width:52px">57.88%</div></div>
         <div class="hbar-row"><div class="hbar-label">RF — RB</div><div class="hbar-track"><div class="hbar-fill" style="width:80%;background:var(--accent)30;border-right:2px solid var(--accent)"><span class="hbar-fill-txt" style="color:var(--accent)">80%</span></div></div><div class="hbar-count" style="width:52px">80.00%</div></div>
@@ -1646,7 +1646,7 @@ function generateDossier(){
 /* ═══════════════════════════════════════════
    MASTER SOURCE — one file feeds all 4 summary tabs
 ═══════════════════════════════════════════ */
-var masterSourceUrl = 'https://script.google.com/macros/s/AKfycbzicYLs4tqpaPOYdZzYB_oorAa8i_BypclAFmbrss5IjUK5QdbI9Pzkr0oZR-u0vfsQcA/exec';
+var masterSourceUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQXJj-KpshvsQmzAb-WGGw-AA5bx5_aUGeP7LcT8tLwWHH87fZtioTg7FUhNO8OJwzXf2eGSecwq-Ns/pub?output=csv';
 var masterTimer = null;
 var masterConnected = false;
 var inventorySourceUrl = 'https://script.google.com/macros/s/AKfycbxS45Q4g-xwv6vxvadSuOC4hzdwP-uJd3UI1GcI5w79rGUTHYAhwhFmFYVpy2DMHdoG/exec';
@@ -1715,7 +1715,7 @@ function setMasterStatus(msg){
 // ── Section detector ────────────────────────────────────────────────────────
 function parseMasterAndRender(text,isInitial){
   var lines=text.split('\n').map(function(l){return l.trim();});
-  var sections={lcp:[],network:[],pool:[],bms_fcu:[],bms_ahu:[]};
+  var sections={lcp:[],network:[],pool:[],bms_fcu:[],bms_ahu:[],payment:[]};
   var cur=null;
 
   lines.forEach(function(line){
@@ -1735,6 +1735,9 @@ function parseMasterAndRender(text,isInitial){
     if(lc.includes('pool')&&(lc.includes('fibre')||lc.includes('fiber')||lc.includes('light'))){
       cur='pool';return;
     }
+    if(lc.includes('payment')&&lc.includes('progress')){
+      cur='payment';return;
+    }
     if(cur && line.replace(/,/g,'').trim()) sections[cur].push(line);
   });
 
@@ -1743,6 +1746,7 @@ function parseMasterAndRender(text,isInitial){
   if(sections.bms_fcu.length||sections.bms_ahu.length){renderBMSLive(sections.bms_fcu,sections.bms_ahu);found.push('BMS');}
   if(sections.network.length){renderNetworkLive(sections.network);found.push('Network Racks');}
   if(sections.pool.length){renderPoolLive(sections.pool);found.push('Pool Fibre Lights');}
+  if(sections.payment.length){renderPaymentLive(sections.payment);found.push('Payment Terms');}
 
   masterConnected=found.length>0;
   var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1761,6 +1765,56 @@ function parseMasterAndRender(text,isInitial){
 }
 
 function csvCols(line){return line.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});}
+
+// ── Payment Terms: patch static card in-place ────────────────────────────────
+function renderPaymentLive(rows){
+  var avg=null, entries=[];
+  rows.forEach(function(line){
+    var cols=csvCols(line);
+    if(!cols[0]) return;
+    var label=cols[0].trim();
+    if(label.toLowerCase()==='average'){ avg=parseFloat(cols[1])||0; return; }
+    if(label.toLowerCase().indexOf('progress of')===0){
+      entries.push({label:label.replace(/^Progress of\s*/i,''), pct:parseFloat(cols[1])||0});
+    }
+  });
+  if(!entries.length) return;
+  if(avg===null){
+    avg = entries.reduce(function(s,e){return s+e.pct;},0)/entries.length;
+  }
+
+  // Headline number
+  var h=document.getElementById('paytermsHeaderPct');
+  if(h) h.textContent=avg.toFixed(2)+'%';
+
+  // KPI tiles — rebuild to match however many floors the sheet actually has
+  var grid=document.getElementById('paytermsKpiGrid');
+  if(grid){
+    grid.innerHTML=entries.map(function(e){
+      var cls = e.pct>=100?'green':(e.pct>0?'blue':'amber');
+      var status = e.pct>=100?'Fully complete':(e.pct>0?'In progress':'Not started');
+      var barW = e.pct>0?e.pct:2;
+      return '<div class="kpi '+cls+'"><div class="kpi-label">'+e.label+'</div><div class="kpi-val">'+e.pct.toFixed(e.pct%1===0?0:2)+'%</div><div class="kpi-foot">'+status+'</div><div class="kpi-bar"><div class="kpi-bar-fill" style="width:'+barW+'%;background:var(--'+cls+')"></div></div></div>';
+    }).join('');
+  }
+
+  // Horizontal bar list + Average row
+  var list=document.getElementById('paytermsHbarList');
+  if(list){
+    var rowsHtml=entries.map(function(e){
+      var color = e.pct>=100?'var(--green)':(e.pct>0?'var(--accent)':'var(--amber)');
+      var barW = e.pct>0?e.pct:2;
+      var txt = e.pct>0?'<span class="hbar-fill-txt" style="color:'+color+'">'+e.pct.toFixed(0)+'%</span>':'';
+      return '<div class="hbar-row"><div class="hbar-label">'+e.label+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+barW+'%;background:'+color+'30;border-right:2px solid '+color+'">'+txt+'</div></div><div class="hbar-count" style="width:52px">'+e.pct.toFixed(2)+'%</div></div>';
+    }).join('');
+    rowsHtml+='<div class="hbar-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">'+
+      '<div class="hbar-label" style="font-weight:600;color:var(--text)">Average</div>'+
+      '<div class="hbar-track"><div class="hbar-fill" style="width:'+avg+'%;background:var(--green)30;border-right:2px solid var(--green)"><span class="hbar-fill-txt" style="color:var(--green)">'+avg.toFixed(2)+'%</span></div></div>'+
+      '<div class="hbar-count" style="width:52px;color:var(--green);font-weight:700">'+avg.toFixed(2)+'%</div>'+
+      '</div>';
+    list.innerHTML=rowsHtml;
+  }
+}
 
 // ── Inventory: dedicated independent source (separate sheet, not part of master source) ──
 function fetchInventorySource(isInitial){
@@ -1795,7 +1849,7 @@ function showStatic(key){
 }
 
 function updateMasterDots(found){
-  var map={LCP:'LCP','BMS':'BMS','Network Racks':'Network Racks','Pool Fibre Lights':'Pool Fibre Lights'};
+  var map={LCP:'LCP','BMS':'BMS','Network Racks':'Network Racks','Pool Fibre Lights':'Pool Fibre Lights','Payment Terms':'Payment Terms'};
   var html=found.map(function(f){
     return'<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;background:var(--green-bg);border:1px solid rgba(45,212,160,.25);font-size:10px;font-weight:600;color:var(--green)">🟢 '+f+'</span>';
   }).join('');
@@ -1943,6 +1997,20 @@ function renderBMSLive(fcuRows,ahuRows){
       if(cells[5]){cells[5].textContent=pct;cells[5].style.color=done===0?'var(--red)':'var(--amber)';}
     }
   });
+
+  // ── Recalculate the AHU overall headline numbers from the live table ──
+  var ahuPercents = Object.keys(ahuMap).map(function(name){
+    var d = ahuMap[name];
+    var stages=[d.cableRouting,d.installation,d.termination,d.integration];
+    var done=stages.filter(function(s){return s==='Completed';}).length;
+    return done/stages.length*100;
+  });
+  if(ahuPercents.length){
+    var ahuOverall = ahuPercents.reduce(function(a,b){return a+b;},0)/ahuPercents.length;
+    var ov=document.getElementById('ahuOverallVal'); if(ov) ov.textContent=ahuOverall.toFixed(0)+'%';
+    var ovBar=document.getElementById('ahuOverallBar'); if(ovBar) ovBar.style.width=ahuOverall+'%';
+    var cardPct=document.getElementById('ahuCardPct'); if(cardPct) cardPct.textContent=ahuOverall.toFixed(0)+'%';
+  }
 }
 
 // ── Network Racks: patch static table in-place ───────────────────────────────
@@ -2557,7 +2625,7 @@ function lcpBadge(v){
 
 function renderLCPMatrix(){
   var el=document.getElementById('lcpMatrix');
-  if(!el||el.children.length)return; // already rendered
+  if(!el)return;
   el.innerHTML=LCP_DATA.map(function(r){
     var done=r.stages.filter(function(s){return s==='Completed';}).length;
     var pct=(done/8*100).toFixed(1);
