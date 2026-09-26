@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LIT BIP — Integrated Project Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 :root{
@@ -212,6 +213,7 @@ table.dtbl tr:last-child td{border-bottom:none}
     <button class="btn btn-accent" onclick="copyLink()">🔗 Share</button>
     <button class="btn btn-accent" onclick="downloadDashboard()">⬇ Download</button>
     <button class="btn btn-green" onclick="downloadReport()">📄 Report</button>
+    <button class="btn btn-accent" id="presentBtn" onclick="generatePresentation()">🎞️ Presentation</button>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
   </div>
 </div>
@@ -853,6 +855,7 @@ table.dtbl tr:last-child td{border-bottom:none}
         <li><b style="color:var(--text)">↑ Update CSV</b> — Upload a new CSV to refresh the active tab</li><br>
         <li><b style="color:var(--text)">🔗 Source</b> — Connect a live URL with optional auto-refresh (1–30 min)</li><br>
         <li><b style="color:var(--text)">📄 Report</b> — Printable PDF summary of the active tab</li><br>
+        <li><b style="color:var(--text)">🎞️ Presentation</b> — One-click PowerPoint (.pptx) snapshot of the whole project, pulled live from every tab</li><br>
         <li><b style="color:var(--text)">⬇ Download</b> — Full dashboard as standalone HTML file</li>
       </ul></div>
       <div class="info-card"><h3>⚙️ Stages Tracked</h3><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
@@ -1491,6 +1494,237 @@ function openReport(html){
   w.document.write(html);w.document.close();
   toast('📄 Report ready — "Save as PDF" in the print dialog','var(--green)');
   setTimeout(function(){w.print();},350);
+}
+
+/* ═══════════════════════════════════════════
+   ONE-CLICK PRESENTATION (.pptx)
+   Snapshots whatever the dashboard currently shows — every tab's
+   panel stays in the DOM (just hidden), so this works no matter
+   which tab is active when the button is clicked.
+═══════════════════════════════════════════ */
+function pText(el){return el?el.textContent.replace(/\s+/g,' ').trim():'';}
+
+function collectPresentationData(){
+  var d={};
+
+  // ── Device Integration & Commissioning ──
+  var devSt=tabStates.device;
+  if(devSt.allData.length){
+    var data=blockData();var m=metrics(data);
+    d.device={n:data.length,avgPct:m.avgPct,hold:m.totalHold,prog:m.totalProg,rooms:m.rooms,
+      delayed:m.delayed,stageComp:m.stageComp,delays:m.delays.slice(0,5),locs:m.locs.slice(0,8)};
+  }
+
+  // ── LCP ── (LCP_DATA is the live in-memory model behind the matrix)
+  if(typeof LCP_DATA!=='undefined'&&LCP_DATA.length){
+    var lcpRows=LCP_DATA.map(function(r){
+      var done=r.stages.filter(function(s){return s==='Completed';}).length;
+      return{loc:r.loc,done:done,total:r.stages.length,pct:done/r.stages.length*100};
+    });
+    var lcpAvg=lcpRows.reduce(function(s,r){return s+r.pct;},0)/lcpRows.length;
+    d.lcp={rows:lcpRows,avgPct:lcpAvg};
+  }
+
+  // ── Network Racks ── (NR_DATA / NR_STAGE_COLS are the live in-memory model)
+  if(typeof NR_DATA!=='undefined'&&NR_DATA.length){
+    var nrRows=NR_DATA.map(function(r){
+      var doneCells=NR_STAGE_COLS.filter(function(c){return r.stages[c]==='Completed';}).length;
+      return{loc:r.location,type:r.rackType,pct:doneCells/NR_STAGE_COLS.length*100};
+    });
+    var totalCells=NR_DATA.length*NR_STAGE_COLS.length;
+    var doneCellsAll=NR_DATA.reduce(function(s,r){return s+NR_STAGE_COLS.filter(function(c){return r.stages[c]==='Completed';}).length;},0);
+    d.network={rows:nrRows,avgPct:totalCells?doneCellsAll/totalCells*100:0,stages:NR_STAGE_COLS.length};
+  }
+
+  // ── Pool Fibre Lights ── (read the live-patched static table)
+  var poolTr=document.querySelector('#static-pool tbody tr');
+  if(poolTr){
+    var pc=poolTr.querySelectorAll('td');
+    d.pool={system:pText(pc[0]),install:pText(pc[1]),integ:pText(pc[2]),test:pText(pc[3]),pct:pText(pc[4])};
+  }
+
+  // ── BMS — FCU by floor ──
+  var fcuCards=document.querySelectorAll('#fcuFloorList > div');
+  if(fcuCards.length){
+    d.fcu={overall:pText(document.getElementById('kpiFcuOverallVal')),floors:[]};
+    fcuCards.forEach(function(card){
+      var head=card.children[0];if(!head)return;
+      var nameWrap=head.children[0],pctEl=head.children[1];
+      var name=nameWrap?pText(nameWrap.children[0]):'';
+      var sub=nameWrap?pText(nameWrap.children[1]):'';
+      d.fcu.floors.push({name:name,sub:sub,pct:pText(pctEl)});
+    });
+  }
+
+  // ── BMS — AHU by unit ──
+  var ahuTbody=document.querySelector('#static-bms table tbody');
+  if(ahuTbody){
+    d.ahu={overall:pText(document.getElementById('ahuOverallVal')),units:[]};
+    ahuTbody.querySelectorAll('tr').forEach(function(tr){
+      var c=tr.querySelectorAll('td');
+      d.ahu.units.push({name:pText(c[0]),cable:pText(c[1]),install:pText(c[2]),term:pText(c[3]),integ:pText(c[4]),pct:pText(c[5])});
+    });
+  }
+
+  return d;
+}
+
+function generatePresentation(){
+  if(typeof PptxGenJS==='undefined'){toast('⚠ Presentation library still loading — try again in a moment','var(--amber)');return;}
+  toast('🎞️ Building presentation…','var(--accent)');
+
+  var d=collectPresentationData();
+  var NAVY='0B0F17',CARD='141A26',ACCENT='4F8EF7',GREEN='2DD4A0',AMBER='F5A83E',TEXT='FFFFFF',MUTED='9AA4B2';
+  var pptx=new PptxGenJS();
+  pptx.defineLayout({name:'LITBIP',width:13.33,height:7.5});
+  pptx.layout='LITBIP';
+
+  function bgSlide(){var s=pptx.addSlide();s.background={color:NAVY};return s;}
+  function header(s,title,sub){
+    s.addText(title,{x:0.5,y:0.35,w:12.3,h:0.6,fontSize:26,bold:true,color:TEXT,fontFace:'Arial'});
+    if(sub)s.addText(sub,{x:0.5,y:0.92,w:12.3,h:0.35,fontSize:13,color:MUTED,fontFace:'Arial'});
+    s.addShape('line',{x:0.5,y:1.32,w:12.3,h:0,line:{color:'243044',width:1}});
+  }
+  function kpiCard(s,x,y,w,label,val,color){
+    s.addShape('roundRect',{x:x,y:y,w:w,h:1.15,rectRadius:0.08,fill:{color:CARD},line:{color:'232B3A',width:1}});
+    s.addText(label.toUpperCase(),{x:x+0.18,y:y+0.12,w:w-0.36,h:0.3,fontSize:9,color:MUTED,fontFace:'Arial',charSpacing:1});
+    s.addText(val,{x:x+0.18,y:y+0.4,w:w-0.36,h:0.6,fontSize:24,bold:true,color:color||TEXT,fontFace:'Arial'});
+  }
+  function tableSlide(title,sub,rows,colW){
+    var s=bgSlide();header(s,title,sub);
+    s.addTable(rows,{x:0.5,y:1.55,w:12.3,colW:colW,fontSize:12,fontFace:'Arial',color:TEXT,
+      border:{type:'solid',color:'232B3A',pt:0.5},fill:{color:CARD},autoPage:false,
+      valign:'middle',rowH:0.42});
+    return s;
+  }
+  function takeaway(s,text,color){
+    s.addShape('roundRect',{x:0.5,y:6.55,w:12.3,h:0.6,rectRadius:0.06,fill:{color:CARD},line:{color:'232B3A',width:1}});
+    s.addText(text,{x:0.7,y:6.55,w:11.9,h:0.6,fontSize:11.5,color:color||TEXT,fontFace:'Arial',valign:'middle'});
+  }
+  function pctColor(p){p=parseFloat(p);if(isNaN(p))return MUTED;return p>=70?GREEN:p>=40?ACCENT:AMBER;}
+
+  // ── Slide 1: Title ──
+  var s1=bgSlide();
+  s1.addText('LIT BIP',{x:0.5,y:2.3,w:12.3,h:0.9,fontSize:40,bold:true,color:ACCENT,fontFace:'Arial'});
+  s1.addText('Integrated Project Dashboard — Status Summary',{x:0.5,y:3.1,w:12.3,h:0.6,fontSize:20,color:TEXT,fontFace:'Arial'});
+  s1.addText('Centralised commissioning and progress tracking across Crestron devices, LCPs, network racks, pool fibre lighting, and BMS.',
+    {x:0.5,y:3.68,w:11.5,h:0.5,fontSize:13,color:MUTED,fontFace:'Arial'});
+  var now=new Date();
+  s1.addText(now.toLocaleDateString([],{year:'numeric',month:'long',day:'numeric'})+' · '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    {x:0.5,y:4.25,w:12.3,h:0.4,fontSize:13,color:MUTED,fontFace:'Arial'});
+  s1.addNotes('Auto-generated from the live LIT BIP dashboard. Figures reflect whichever data source (default demo data or a connected live CSV/Apps Script feed) was loaded at the moment this presentation was created.');
+
+  // ── Slide 2: Executive Summary ──
+  var s2=bgSlide();header(s2,'Executive Summary','Live snapshot across every tracked system');
+  var cards=[];
+  if(d.device)cards.push({l:'Device Commissioning',v:d.device.avgPct.toFixed(1)+'%'});
+  if(d.lcp)cards.push({l:'LCP Progress',v:d.lcp.avgPct.toFixed(1)+'%'});
+  if(d.network)cards.push({l:'Network Racks',v:d.network.avgPct.toFixed(1)+'%'});
+  if(d.pool)cards.push({l:'Pool Fibre Lights',v:d.pool.pct||'—'});
+  if(d.fcu)cards.push({l:'BMS · FCU',v:d.fcu.overall||'—'});
+  if(d.ahu)cards.push({l:'BMS · AHU',v:d.ahu.overall||'—'});
+  var cw=(12.3-(cards.length-1)*0.25)/Math.max(cards.length,1);
+  cards.forEach(function(c,i){kpiCard(s2,0.5+i*(cw+0.25),1.7,cw,c.l,c.v,pctColor(c.v));});
+  if(d.device){
+    kpiCard(s2,0.5,3.1,3.9,'On Hold',String(d.device.hold),AMBER);
+    kpiCard(s2,4.6,3.1,3.9,'In Progress',String(d.device.prog),ACCENT);
+    kpiCard(s2,8.7,3.1,4.1,'Delayed Devices',String(d.device.delayed),AMBER);
+  }
+  var numAvg=cards.map(function(c){return parseFloat(c.v);}).filter(function(v){return !isNaN(v);});
+  var overallAvg=numAvg.length?numAvg.reduce(function(a,b){return a+b;},0)/numAvg.length:null;
+  var lagging=cards.filter(function(c){var v=parseFloat(c.v);return !isNaN(v)&&v<50;}).map(function(c){return c.l;});
+  var overviewLine=overallAvg!==null
+    ? 'Across '+cards.length+' tracked systems, average progress is '+overallAvg.toFixed(1)+'%.'+
+      (lagging.length?' Needs attention: '+lagging.join(', ')+'.':' No system is critically behind.')
+    : 'Connect a live data source on any tab to populate this summary.';
+  s2.addText(overviewLine,{x:0.5,y:4.45,w:12.3,h:0.6,fontSize:13,color:TEXT,italic:true,fontFace:'Arial'});
+  s2.addNotes('Executive summary aggregates the headline progress figure from each tab as currently displayed on the dashboard.');
+
+  // ── Slide 3: Device Integration & Commissioning ──
+  if(d.device){
+    var rows=[[{text:'Stage',options:{bold:true,color:MUTED,fontSize:10}},{text:'% Complete',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}]];
+    d.device.stageComp.forEach(function(st){rows.push([st.label,{text:st.pct.toFixed(1)+'%',options:{align:'right',color:pctColor(st.pct)}}]);});
+    var s3=tableSlide('Device Integration & Commissioning',
+      d.device.n.toLocaleString()+' devices · '+d.device.rooms+' rooms covered',rows,[8.8,3.5]);
+    var devLine=d.device.delays.length
+      ? 'Top delay reasons: '+d.device.delays.map(function(x){return x.reason+' ('+x.count+')';}).join('  ·  ')
+      : 'No active delays logged — '+d.device.hold+' devices on hold, '+d.device.prog+' in progress.';
+    takeaway(s3,devLine,d.device.delays.length?AMBER:GREEN);
+    s3.addNotes('Average completion: '+d.device.avgPct.toFixed(1)+'%. On hold: '+d.device.hold+'. In progress: '+d.device.prog+'. Delayed devices: '+d.device.delayed+'.');
+  }
+
+  // ── Slide 4: LCP ──
+  if(d.lcp){
+    var rows2=[[{text:'Location',options:{bold:true,color:MUTED,fontSize:10}},{text:'Stages Done',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Progress',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}]];
+    d.lcp.rows.forEach(function(r){rows2.push([r.loc,{text:r.done+' / '+r.total,options:{align:'center'}},{text:r.pct.toFixed(1)+'%',options:{align:'right',color:pctColor(r.pct)}}]);});
+    var s4=tableSlide('Lighting Control Panel (LCP)','Overall progress: '+d.lcp.avgPct.toFixed(1)+'%',rows2,[6.3,3,3]);
+    var lcpDone=d.lcp.rows.filter(function(r){return r.done===r.total;}).map(function(r){return r.loc;});
+    var lcpHold=d.lcp.rows.filter(function(r){return r.done===0;}).map(function(r){return r.loc;});
+    var lcpLine=(lcpDone.length?'Fully commissioned: '+lcpDone.join(', ')+'.  ':'')+
+      (lcpHold.length?'On hold: '+lcpHold.join(', ')+'.':'');
+    takeaway(s4,lcpLine||'All LCPs are actively progressing through commissioning.',lcpHold.length?AMBER:GREEN);
+    s4.addNotes(d.lcp.rows.length+' LCP locations tracked across 8 commissioning stages each.');
+  }
+
+  // ── Slide 5: Network Racks ──
+  if(d.network){
+    var rows3=[[{text:'Location',options:{bold:true,color:MUTED,fontSize:10}},{text:'Rack Type',options:{bold:true,color:MUTED,fontSize:10}},{text:'Progress',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}]];
+    d.network.rows.forEach(function(r){rows3.push([r.loc,r.type||'—',{text:r.pct.toFixed(1)+'%',options:{align:'right',color:pctColor(r.pct)}}]);});
+    var s5=tableSlide('Network Racks','Overall progress: '+d.network.avgPct.toFixed(1)+'% across '+d.network.stages+' stages',rows3,[6.3,3,3]);
+    var nrSorted=d.network.rows.slice().sort(function(a,b){return b.pct-a.pct;});
+    var nrLine=nrSorted.length
+      ? 'Leading: '+nrSorted[0].loc+' ('+nrSorted[0].pct.toFixed(0)+'%). Furthest behind: '+nrSorted[nrSorted.length-1].loc+' ('+nrSorted[nrSorted.length-1].pct.toFixed(0)+'%).'
+      : 'No racks tracked yet.';
+    takeaway(s5,nrLine,ACCENT);
+    s5.addNotes(d.network.rows.length+' racks tracked.');
+  }
+
+  // ── Slide 6: Pool Fibre Lights ──
+  if(d.pool){
+    var rows4=[
+      [{text:'System',options:{bold:true,color:MUTED,fontSize:10}},{text:'Installation',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Integration',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Integ. & Testing',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Progress',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}],
+      [d.pool.system,{text:d.pool.install,options:{align:'center'}},{text:d.pool.integ,options:{align:'center'}},{text:d.pool.test,options:{align:'center'}},{text:d.pool.pct,options:{align:'right',color:pctColor(d.pool.pct)}}]
+    ];
+    var s6=tableSlide('Pool Fibre Lights','Installation-to-integration pipeline',rows4,[3.3,2.5,2.5,2.5,1.5]);
+    var poolDone=/completed/i.test(d.pool.install);
+    var poolLine=poolDone
+      ? 'Installation is complete. Integration and integration & testing remain on hold pending Crestron commissioning schedule.'
+      : 'Installation is still in progress; integration stages have not yet started.';
+    takeaway(s6,poolLine,poolDone?GREEN:AMBER);
+  }
+
+  // ── Slide 7: BMS — FCU by Floor ──
+  if(d.fcu&&d.fcu.floors.length){
+    var rows5=[[{text:'Floor',options:{bold:true,color:MUTED,fontSize:10}},{text:'Detail',options:{bold:true,color:MUTED,fontSize:10}},{text:'Progress',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}]];
+    d.fcu.floors.forEach(function(f){rows5.push([f.name,f.sub,{text:f.pct,options:{align:'right',color:pctColor(f.pct)}}]);});
+    var s7=tableSlide('BMS — FCU Summary by Floor','Overall FCU progress: '+d.fcu.overall,rows5,[3,7.3,2]);
+    var fcuSorted=d.fcu.floors.slice().sort(function(a,b){return parseFloat(a.pct)-parseFloat(b.pct);});
+    takeaway(s7,'Needs attention: '+fcuSorted[0].name+' ('+fcuSorted[0].pct+') — '+fcuSorted[0].sub+'.',AMBER);
+  }
+
+  // ── Slide 8: BMS — AHU by Unit ──
+  if(d.ahu&&d.ahu.units.length){
+    var rows6=[[{text:'AHU Unit',options:{bold:true,color:MUTED,fontSize:10}},{text:'Cable Routing',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Installation',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Termination',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'BMS Integ.',options:{bold:true,color:MUTED,fontSize:10,align:'center'}},{text:'Progress',options:{bold:true,color:MUTED,fontSize:10,align:'right'}}]];
+    d.ahu.units.forEach(function(u){rows6.push([u.name,{text:u.cable,options:{align:'center'}},{text:u.install,options:{align:'center'}},{text:u.term,options:{align:'center'}},{text:u.integ,options:{align:'center'}},{text:u.pct,options:{align:'right',color:pctColor(u.pct)}}]);});
+    var s8=tableSlide('BMS — AHU Summary by Unit','Overall AHU progress: '+d.ahu.overall,rows6,[2.6,2,1.9,1.9,2,1.9]);
+    var onHoldCount=d.ahu.units.filter(function(u){return/hold/i.test(u.install)||/hold/i.test(u.term)||/hold/i.test(u.integ);}).length;
+    takeaway(s8,'Installation, termination, and BMS integration remain on hold for '+onHoldCount+' of '+d.ahu.units.length+' units, pending fit-out completion.',AMBER);
+  }
+
+  // ── Closing slide ──
+  var sEnd=bgSlide();
+  sEnd.addText('Thank you',{x:0.5,y:2.7,w:12.3,h:0.8,fontSize:32,bold:true,color:TEXT,fontFace:'Arial'});
+  sEnd.addText('LIT BIP — Integrated Project Dashboard',{x:0.5,y:3.45,w:12.3,h:0.45,fontSize:14,color:MUTED,fontFace:'Arial'});
+  sEnd.addText('For the live, up-to-the-minute view — including filters, delay tracking, and per-tab CSV export — see the dashboard directly.',
+    {x:0.5,y:4.0,w:11.5,h:0.5,fontSize:12,color:MUTED,fontFace:'Arial',italic:true});
+
+  var fname='LIT-BIP-Presentation_'+now.toISOString().slice(0,10)+'.pptx';
+  pptx.writeFile({fileName:fname}).then(function(){
+    toast('✓ Presentation downloaded — '+fname,'var(--green)');
+  }).catch(function(err){
+    console.error('Presentation generation failed:',err);
+    toast('⚠ Could not build presentation','var(--amber)');
+  });
 }
 
 /* ═══════════════════════════════════════════
